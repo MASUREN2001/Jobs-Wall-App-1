@@ -5,6 +5,14 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+interface ParsedData {
+  replyText?: string;
+  nextAction?: string;
+  askBack?: string;
+  tone?: string;
+  pace?: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { text } = await request.json();
@@ -13,6 +21,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'テキストが必要です' },
         { status: 400 }
+      );
+    }
+
+    // APIキーの確認
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.error('OPENAI_API_KEY is not set');
+      return NextResponse.json(
+        { error: 'API設定エラー' },
+        { status: 500 }
       );
     }
 
@@ -84,21 +102,21 @@ User: MVP、どこから手をつけるべき？
 
     try {
       // 新しい形式のパース処理
-      let parsedData = {};
+      let parsedData: ParsedData = {};
       let replyText = '';
 
-      // <<JSON>> ブロックからJSONを抽出
-      const jsonMatch = response.match(/<<JSON>>(.*?)<<END>>/s);
+      // <<JSON>> ブロックからJSONを抽出（ES5互換）
+      const jsonMatch = response.match(/<<JSON>>([\s\S]*?)<<END>>/);
       if (jsonMatch) {
         try {
-          parsedData = JSON.parse(jsonMatch[1].trim());
-        } catch (e) {
-          console.error('Failed to parse JSON block:', e);
+          parsedData = JSON.parse(jsonMatch[1].trim()) as ParsedData;
+        } catch (parseError) {
+          console.error('Failed to parse JSON block:', parseError);
         }
       }
 
-      // <reply> タグからreplyTextを抽出
-      const replyMatch = response.match(/<reply>(.*?)<\/reply>/s);
+      // <reply> タグからreplyTextを抽出（ES5互換）
+      const replyMatch = response.match(/<reply>([\s\S]*?)<\/reply>/);
       if (replyMatch) {
         replyText = replyMatch[1].trim();
       } else {
@@ -136,7 +154,7 @@ User: MVP、どこから手をつけるべき？
   } catch (error) {
     console.error('OpenAI API error:', error);
     
-    // ジョブズ風フォールバック応答（JSON形式）
+    // ジョブズ風フォールバック応答
     const fallbackResponses = [
       {
         replyText: "革新は、既存の枠を壊すことから始まる。今日何を壊す？",

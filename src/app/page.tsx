@@ -21,7 +21,6 @@ export default function Home() {
   const [state, setState] = useState<State>('idle');
   const [isLoading, setIsLoading] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [jobsSatisfaction, setJobsSatisfaction] = useState(0.5);
   const [currentEmotion, setCurrentEmotion] = useState('neutral');
   const [currentPlaceholder, setCurrentPlaceholder] = useState('');
@@ -32,6 +31,7 @@ export default function Home() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+  // placeholderExamplesを関数外で定数として定義
   const placeholderExamples = [
     "健康管理アプリのアイデアがあります。忙しいビジネスパーソンが簡単に...",
     "新しいSNSプラットフォームを考えています。既存のものとは違って...",
@@ -44,11 +44,13 @@ export default function Home() {
     "環境問題を解決するアプリのコンセプトがあるのですが..."
   ];
   
-  // クライアントサイドでのみplaceholderを設定
+  // クライアントサイドでのみplaceholderを設定（hydration mismatch回避）
   useEffect(() => {
-    setCurrentPlaceholder(
-      placeholderExamples[Math.floor(Math.random() * placeholderExamples.length)]
-    );
+    if (placeholderExamples.length > 0) {
+      setCurrentPlaceholder(
+        placeholderExamples[Math.floor(Math.random() * placeholderExamples.length)]
+      );
+    }
   }, []);
 
   // localStorage key for today's session
@@ -79,20 +81,6 @@ export default function Home() {
       console.error('Failed to save chat history:', error);
     }
   };
-
-  // バーチャルキーボード検出
-  useEffect(() => {
-    const handleResize = () => {
-      const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.clientHeight;
-      const threshold = 150;
-      
-      setIsKeyboardVisible(documentHeight - windowHeight > threshold);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -173,7 +161,7 @@ export default function Home() {
             // replyTextがJSON文字列の場合、パースする
             try {
               parsedData = JSON.parse(data.replyText);
-            } catch (e) {
+            } catch {
               // パースに失敗した場合、そのまま使用
               parsedData = data;
             }
@@ -248,7 +236,7 @@ export default function Home() {
             // replyTextがJSON文字列の場合、パースする
             try {
               parsedData = JSON.parse(data.replyText);
-            } catch (e) {
+            } catch {
               // パースに失敗した場合、そのまま使用
               parsedData = data;
             }
@@ -317,7 +305,6 @@ export default function Home() {
       className="min-h-screen bg-black flex flex-col touch-manipulation relative overflow-hidden" 
       style={{ 
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-        minHeight: '100vh',
         minHeight: '100dvh'
       }}
     >
@@ -629,17 +616,6 @@ export default function Home() {
           }
         }
         
-        @keyframes slide-in-bottom {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
         @keyframes fade-in {
           from {
             opacity: 0;
@@ -701,10 +677,6 @@ export default function Home() {
         
         .animate-slide-in-right {
           animation: slide-in-right 0.6s ease-out;
-        }
-        
-        .animate-slide-in-bottom {
-          animation: slide-in-bottom 0.6s ease-out;
         }
         
         .animate-fade-in {
